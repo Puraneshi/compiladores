@@ -23,12 +23,17 @@ public class LexicalAnalyzer {
         while (position < input.length()) {
             char currentChar = input.charAt(position);
             
-            if (currentChar == '\n') {
+             if (currentChar == '\n') {
                 lineNumber++;
                 position++;
             } else if (Character.isWhitespace(currentChar)) {
                 // Skip whitespace
                 position++;
+            } else if (currentChar == '%') {
+                // Skip the rest of the line for comments
+                while (position < input.length() && input.charAt(position) != '\n') {
+                    position++;
+                }
             } else if (Character.isLetter(currentChar) || currentChar == '_') {
                 // Identifier or keyword
                 StringBuilder identifier = new StringBuilder();
@@ -39,7 +44,7 @@ public class LexicalAnalyzer {
                 }
                 String tokenValue = identifier.toString();
                 if (isKeyword(tokenValue)) {
-                    tokens.add(new Token(TokenType.KEYWORD, tokenValue));
+                    System.out.println(TokenType.KEYWORD);
                 } else {
                     tokens.add(new Token(TokenType.IDENTIFIER, tokenValue));
                     symbolTable.putIfAbsent(tokenValue, TokenType.IDENTIFIER);
@@ -51,17 +56,17 @@ public class LexicalAnalyzer {
                     constant.append(input.charAt(position));
                     position++;
                 }
-                tokens.add(new Token(TokenType.CONSTANT, constant.toString()));
+                System.out.println(TokenType.CONSTANT);
             } else {
                 // Operator or other character
                 switch (currentChar) {
                     case ':':
                         if (position + 1 < input.length() && input.charAt(position + 1) == '=') {
-                            tokens.add(new Token(TokenType.ASSIGN_OP, ":="));
+                            System.out.println(TokenType.ASSIGN_OP);
                             position += 2;
                         } else {
-                            tokens.add(new Token(TokenType.OPERATOR, Character.toString(currentChar)));
-                            position++;
+                            System.err.println("Invalid character: " + currentChar + " at line " + lineNumber);
+                            return tokens;
                         }
                         break;
                     case '=':
@@ -69,40 +74,46 @@ public class LexicalAnalyzer {
                     case '<':
                     case '!':
                         if (position + 1 < input.length() && input.charAt(position + 1) == '=') {
-                            tokens.add(new Token(TokenType.RELOP, Character.toString(currentChar) + "="));
+                            System.out.println(TokenType.RELOP);
                             position += 2;
                         } else {
-                            tokens.add(new Token(TokenType.RELOP, Character.toString(currentChar)));
+                            System.out.println(TokenType.RELOP);
                             position++;
                         }
                         break;
                     case '+':
                     case '-':
+			     System.out.println(TokenType.ADDOP);
+			     position++;
+			     break;
                     case '|':
-                        if (currentChar == '|' && position + 1 < input.length() && input.charAt(position + 1) == '|') {
-                            tokens.add(new Token(TokenType.ADDOP, "||"));
+                        if (position + 1 < input.length() && input.charAt(position + 1) == '|') {
+                            System.out.println(TokenType.ADDOP);
                             position += 2;
                         } else {
-                            tokens.add(new Token(TokenType.ADDOP, Character.toString(currentChar)));
-                            position++;
+                            System.err.println("Invalid character: " + currentChar + " at line " + lineNumber);
+                            return tokens;
                         }
                         break;
                     case '*':
                     case '/':
+			     System.out.println(TokenType.MULOP);
+			     position++;
+			     break;
                     case '&':
-                        if (currentChar == '&' && position + 1 < input.length() && input.charAt(position + 1) == '&') {
-                            tokens.add(new Token(TokenType.MULOP, "&&"));
+                        if (position + 1 < input.length() && input.charAt(position + 1) == '&') {
+                            System.out.println(TokenType.MULOP);
                             position += 2;
                         } else {
-                            tokens.add(new Token(TokenType.MULOP, Character.toString(currentChar)));
-                            position++;
+                            System.err.println("Invalid character: " + currentChar + " at line " + lineNumber);
+                            return tokens;
                         }
                         break;
                     case '(':
                     case ')':
                     case ';':
                     case ',':
-                        tokens.add(new Token(TokenType.SYMBOL, Character.toString(currentChar)));
+                        System.out.println(TokenType.SYMBOL);
                         position++;
                         break;
                     case '{':
@@ -114,7 +125,7 @@ public class LexicalAnalyzer {
                         while (position < input.length() && input.charAt(position) != '}') {
                             char nextChar = input.charAt(position);
 				   if (nextChar == '\n') {
-                                System.err.println("Newline in literal at line " + lineNumber);
+                                System.err.println("Unclosed literal at line " + lineNumber);
                                 return tokens;
 				   }
                             if (nextChar >= 0 && nextChar <= 255) { // ASCII printable characters
@@ -127,7 +138,7 @@ public class LexicalAnalyzer {
                         }
                         if (position < input.length() && input.charAt(position) == '}') {
                             literal.append(input.charAt(position)); // Include the closing '}'
-                            tokens.add(new Token(TokenType.LITERAL, literal.toString()));
+                            System.out.println(TokenType.LITERAL);
                             position++;
                         } else {
                             System.err.println("Unclosed literal at line " + lineNumber);
