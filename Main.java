@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 
 public class Main {
@@ -19,13 +20,16 @@ public class Main {
         
         // Instantiate the LexicalAnalyzer
         LexicalAnalyzer lexicalAnalyzer = new LexicalAnalyzer(inputText);
-        
+        try{
+	    lexicalAnalyzer.analyze();
         // Analyze the input text
-        List<Token> tokens = lexicalAnalyzer.analyze();
-        
-        // Process the tokens
-        for (Token token : tokens) {
-            System.out.println(token.getType() + ": " + token.getValue());
+            //Token token = lexicalAnalyzer.analyze();
+            //if(token == null){
+             //throw new Exception("Nenhum token identificado.");
+            //}
+        } catch (Exception e){
+	    System.out.println("");
+            System.out.println(e.getMessage()+" ❌ 🤦‍♀️");
         }
     }
     

@@ -1,3 +1,4 @@
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -7,7 +8,7 @@ public class LexicalAnalyzer {
     private String input;
     private int position;
     private int lineNumber;
-    private Map<String, TokenType> symbolTable;
+    private HashMap<String, TokenType> symbolTable;
     
     public LexicalAnalyzer(String input) {
         this.input = input;
@@ -17,25 +18,21 @@ public class LexicalAnalyzer {
         prepopulateSymbolTable();
     }
     
-    public List<Token> analyze() {
-        List<Token> tokens = new ArrayList<>();
-        
+    public Token analyze() throws Exception {
         while (position < input.length()) {
             char currentChar = input.charAt(position);
             
-             if (currentChar == '\n') {
+            if (currentChar == '\n') {
                 lineNumber++;
                 position++;
             } else if (Character.isWhitespace(currentChar)) {
-                // Skip whitespace
                 position++;
             } else if (currentChar == '%') {
-                // Skip the rest of the line for comments
                 while (position < input.length() && input.charAt(position) != '\n') {
                     position++;
                 }
             } else if (Character.isLetter(currentChar) || currentChar == '_') {
-                // Identifier or keyword
+                // ID ou KW
                 StringBuilder identifier = new StringBuilder();
                 while (position < input.length() &&
                         (Character.isLetterOrDigit(input.charAt(position)) || input.charAt(position) == '_')) {
@@ -44,119 +41,132 @@ public class LexicalAnalyzer {
                 }
                 String tokenValue = identifier.toString();
                 if (isKeyword(tokenValue)) {
-                    System.out.println(TokenType.KEYWORD);
+                    System.out.println(TokenType.KEYWORD + ", "+ tokenValue);
                 } else {
-                    tokens.add(new Token(TokenType.IDENTIFIER, tokenValue));
                     symbolTable.putIfAbsent(tokenValue, TokenType.IDENTIFIER);
+                    System.out.println(TokenType.IDENTIFIER + ", "+ tokenValue);
                 }
             } else if (Character.isDigit(currentChar)) {
-                // Integer or float constant
+                // integer ou real
                 StringBuilder constant = new StringBuilder();
                 while (position < input.length() && (Character.isDigit(input.charAt(position)) || input.charAt(position) == '.')) {
                     constant.append(input.charAt(position));
                     position++;
                 }
-                System.out.println(TokenType.CONSTANT);
+                System.out.println(TokenType.CONSTANT + ", "+ constant.toString());
             } else {
-                // Operator or other character
+                // operadores
                 switch (currentChar) {
                     case ':':
                         if (position + 1 < input.length() && input.charAt(position + 1) == '=') {
-                            System.out.println(TokenType.ASSIGN_OP);
+                            System.out.println(TokenType.ASSIGN_OP + ", "+ ":=");
                             position += 2;
                         } else {
-                            System.err.println("Invalid character: " + currentChar + " at line " + lineNumber);
-                            return tokens;
+                            printSymbolTable();
+                            throw new Exception("Invalid character: " + currentChar + " at line " + lineNumber);
                         }
                         break;
                     case '=':
+			System.out.println(TokenType.RELOP + ", "+ currentChar);
+                        position++;
+			break;
                     case '>':
                     case '<':
                     case '!':
                         if (position + 1 < input.length() && input.charAt(position + 1) == '=') {
-                            System.out.println(TokenType.RELOP);
+                            System.out.println(TokenType.RELOP + ", "+ currentChar + "=");
                             position += 2;
                         } else {
-                            System.out.println(TokenType.RELOP);
+                            System.out.println(TokenType.RELOP + ", "+ currentChar);
                             position++;
                         }
                         break;
                     case '+':
                     case '-':
-			     System.out.println(TokenType.ADDOP);
+			     System.out.println(TokenType.ADDOP + ", "+ currentChar);
 			     position++;
 			     break;
                     case '|':
                         if (position + 1 < input.length() && input.charAt(position + 1) == '|') {
-                            System.out.println(TokenType.ADDOP);
+                            System.out.println(TokenType.ADDOP + ", "+ currentChar + "|");
                             position += 2;
                         } else {
-                            System.err.println("Invalid character: " + currentChar + " at line " + lineNumber);
-                            return tokens;
+                            printSymbolTable();
+                            throw new Exception("Invalid character: " + currentChar + " at line " + lineNumber);
                         }
                         break;
                     case '*':
                     case '/':
-			     System.out.println(TokenType.MULOP);
+			     System.out.println(TokenType.MULOP + ", "+ currentChar);
 			     position++;
 			     break;
                     case '&':
                         if (position + 1 < input.length() && input.charAt(position + 1) == '&') {
-                            System.out.println(TokenType.MULOP);
+                            System.out.println(TokenType.MULOP + ", "+ currentChar + "&");
                             position += 2;
                         } else {
-                            System.err.println("Invalid character: " + currentChar + " at line " + lineNumber);
-                            return tokens;
+                            printSymbolTable();
+                            throw new Exception("Invalid character: " + currentChar + " at line " + lineNumber);
                         }
                         break;
                     case '(':
                     case ')':
                     case ';':
                     case ',':
-                        System.out.println(TokenType.SYMBOL);
+                        System.out.println(TokenType.SYMBOL + ", "+ currentChar);
                         position++;
                         break;
                     case '{':
-                        // Start of literal
                         StringBuilder literal = new StringBuilder();
                         literal.append(currentChar);
                         position++;
-                        // Continue adding characters until the end of the literal is found
+                        
                         while (position < input.length() && input.charAt(position) != '}') {
                             char nextChar = input.charAt(position);
-				   if (nextChar == '\n') {
-                                System.err.println("Unclosed literal at line " + lineNumber);
-                                return tokens;
-				   }
-                            if (nextChar >= 0 && nextChar <= 255) { // ASCII printable characters
+                            if (nextChar == '\n') {
+                                printSymbolTable();
+                                throw new Exception("Unclosed literal at line " + lineNumber);
+                            }
+                            if (nextChar >= 0 && nextChar <= 255) {
                                 literal.append(nextChar);
                                 position++;
                             } else {
-                                System.err.println("Non-ASCII character in literal at line " + lineNumber);
-                                return tokens;
+                                printSymbolTable();
+                                throw new Exception("Non-ASCII character in literal at line " + lineNumber);
                             }
                         }
                         if (position < input.length() && input.charAt(position) == '}') {
-                            literal.append(input.charAt(position)); // Include the closing '}'
-                            System.out.println(TokenType.LITERAL);
+                            literal.append(input.charAt(position));
+                            System.out.println(TokenType.LITERAL + ", "+ literal.toString());
                             position++;
                         } else {
-                            System.err.println("Unclosed literal at line " + lineNumber);
-                            return tokens;
+                            printSymbolTable();
+                            throw new Exception("Unclosed literal at line " + lineNumber);
                         }
                         break;
                     default:
-                        System.err.println("Invalid character: " + currentChar + " at line " + lineNumber);
-                        return tokens;
+                        printSymbolTable();
+                        throw new Exception("Invalid character: " + currentChar + " at line " + lineNumber);
                 }
             }
         }
         
-        return tokens;
+        printSymbolTable();
+	System.out.println("");
+        System.out.println("UHUUUUUUULL!!!🤩(Código fonte lido com sucesso ✅)");
+        return null;
+    }
+    
+    private void printSymbolTable()
+    {
+        System.out.println("");
+        System.out.println("Tabela de simbolos");
+        
+        symbolTable.forEach((key, value) -> System.out.println("Key: " + key + ", Value: " + value));
     }
     
     private void prepopulateSymbolTable() {
-        // Keywords
+        // keywords
         symbolTable.put("app", TokenType.KEYWORD);
         symbolTable.put("var", TokenType.KEYWORD);
         symbolTable.put("integer", TokenType.KEYWORD);
@@ -171,18 +181,18 @@ public class LexicalAnalyzer {
         symbolTable.put("until", TokenType.KEYWORD);
         symbolTable.put("read", TokenType.KEYWORD);
         symbolTable.put("write", TokenType.KEYWORD);
-        // Relational operators
+        // relops
         symbolTable.put("=", TokenType.RELOP);
         symbolTable.put(">", TokenType.RELOP);
         symbolTable.put(">=", TokenType.RELOP);
         symbolTable.put("<", TokenType.RELOP);
         symbolTable.put("<=", TokenType.RELOP);
         symbolTable.put("!=", TokenType.RELOP);
-        // Additive operators
+        // addops
         symbolTable.put("+", TokenType.ADDOP);
         symbolTable.put("-", TokenType.ADDOP);
         symbolTable.put("||", TokenType.ADDOP);
-        // Multiplicative operators
+        // mulops
         symbolTable.put("*", TokenType.MULOP);
         symbolTable.put("/", TokenType.MULOP);
         symbolTable.put("&&", TokenType.MULOP);
